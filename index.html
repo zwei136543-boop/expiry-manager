@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    
+    <!-- SEO Meta Tags -->
+    <title>产品效期管理系统 - Product Expiry Management</title>
+    <meta name="description" content="专业的产品效期管理工具，实时监控产品过期状态，多级预警提醒，支持多店铺管理、数据导入导出。">
+    <meta name="keywords" content="效期管理,产品过期,库存管理,预警系统,店铺管理,expiry management">
+    <meta name="author" content="Expiry Manager">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="产品效期管理系统">
+    <meta property="og:description" content="专业的产品效期管理工具，实时监控产品过期状态">
+    <meta property="og:url" content="https://zwei136543-boop.github.io/expiry-manager/">
+    <meta property="og:locale" content="zh_CN">
+    
+    <!-- PWA / Mobile -->
+    <meta name="apple-mobile-web-app-capable" content="true">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="效期管理">
+    <meta name="theme-color" content="#0f5032">
+    <meta name="msapplication-TileColor" content="#0f5032">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://xdhogzcpqyishyepohvt.supabase.co">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- App Scripts (must load in order, no defer) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/app.js?v=5"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Login Modal -->
+        <div id="loginModal" class="login-page">
+            <div class="login-bg-pattern"></div>
+            <div class="login-card">
+                <div class="login-header">
+                    <img src="images/logo.jpg" alt="公司LOGO" class="login-logo" loading="lazy">
+                    <h1>效期管理系统</h1>
+                    <p>Product Expiry Management</p>
+                </div>
+                <div class="login-form">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+                        <span class="input-icon">👤</span>
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                        <span class="input-icon">🔒</span>
+                    </div>
+                    <button class="btn-login" onclick="login()">登 录</button>
+                    <div class="login-hint">
+                        <p>测试账号：admin / 123456</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App (Hidden until login) -->
+        <div id="mainApp" class="main-app" style="display: none;">
+            <header class="app-header">
+                <div class="header-left">
+                    <img src="images/logo.jpg" alt="LOGO" class="header-logo" loading="lazy">
+                    <div class="header-title">
+                        <h1>效期管理系统</h1>
+                        <span>Product Expiry Management</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="user-badge">
+                        <span class="user-avatar">👤</span>
+                        <span id="userName" class="user-name">管理员</span>
+                        <span id="userRole" class="user-role">管理员</span>
+                    </div>
+                    <button class="btn-header" onclick="showChangePasswordModal()">
+                        <span>⚙️</span> 修改密码
+                    </button>
+                    <button class="btn-header btn-logout" onclick="logout()">
+                        <span>🚪</span> 退出
+                    </button>
+                </div>
+            </header>
+
+            <!-- Settings Panel (Admin Only) -->
+            <div class="settings-panel" id="settingsPanel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="title-icon">⚙️</span>
+                        预警规则设置
+                        <span class="admin-badge">管理员</span>
+                    </div>
+                </div>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span class="status-dot expired"></span>
+                            已过期
+                        </div>
+                        <div class="setting-input">
+                            <input type="number" value="0" readonly>
+                            <span>天</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span class="status-dot urgent"></span>
+                            紧急预警
+                        </div>
+                        <div class="setting-input">
+                            <input type="number" id="day7" value="7">
+                            <span>天内</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span class="status-dot high"></span>
+                            高风险
+                        </div>
+                        <div class="setting-input">
+                            <input type="number" id="day15" value="15">
+                            <span>天内</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span class="status-dot medium"></span>
+                            中风险
+                        </div>
+                        <div class="setting-input">
+                            <input type="number" id="day30" value="30">
+                            <span>天内</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span class="status-dot low"></span>
+                            低风险
+                        </div>
+                        <div class="setting-input">
+                            <input type="number" id="day60" value="60">
+                            <span>天内</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span class="status-dot notice"></span>
+                            提醒关注
+                        </div>
+                        <div class="setting-input">
+                            <input type="number" id="day90" value="90">
+                            <span>天内</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-save" onclick="saveSettings()">
+                    <span>💾</span> 保存预警规则
+                </button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card expired">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="statExpired">0</div>
+                        <div class="stat-label">已过期</div>
+                        <div class="stat-desc">需立即处理</div>
+                    </div>
+                </div>
+                <div class="stat-card urgent">
+                    <div class="stat-icon">🔴</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat7">0</div>
+                        <div class="stat-label">7天内过期</div>
+                        <div class="stat-desc">紧急预警</div>
+                    </div>
+                </div>
+                <div class="stat-card high">
+                    <div class="stat-icon">🟠</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat15">0</div>
+                        <div class="stat-label">15天内过期</div>
+                        <div class="stat-desc">高风险</div>
+                    </div>
+                </div>
+                <div class="stat-card medium">
+                    <div class="stat-icon">🟡</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat30">0</div>
+                        <div class="stat-label">30天内过期</div>
+                        <div class="stat-desc">中风险</div>
+                    </div>
+                </div>
+                <div class="stat-card low">
+                    <div class="stat-icon">🟢</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat60">0</div>
+                        <div class="stat-label">60天内过期</div>
+                        <div class="stat-desc">低风险</div>
+                    </div>
+                </div>
+                <div class="stat-card notice">
+                    <div class="stat-icon">🔵</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat90">0</div>
+                        <div class="stat-label">90天内过期</div>
+                        <div class="stat-desc">提醒关注</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="main-grid">
+                <!-- Left Panel: Store Ranking / Store Overview -->
+                <div class="panel store-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="title-icon">🏪</span>
+                            <span id="storePanelTitle">问题店铺排行</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="showStoreManage()">查看全部</button>
+                    </div>
+                    <div class="store-list" id="storeList">
+                        <div class="empty-state">
+                            <span class="empty-icon">📭</span>
+                            <p>暂无数据</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Product Table -->
+                <div class="panel product-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="title-icon">⚠️</span>
+                            紧急处理产品
+                        </div>
+                        <button class="btn btn-primary" onclick="exportData()">
+                            <span>📤</span> 导出列表
+                        </button>
+                    </div>
+                    
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <div class="filter-item">
+                            <label>搜索产品</label>
+                            <input type="text" id="urgentSearchProduct" placeholder="产品名称..." oninput="filterProducts()">
+                        </div>
+                        <div class="filter-item">
+                            <label>店铺</label>
+                            <select id="urgentFilterStore" onchange="filterProducts()">
+                                <option value="">全部店铺</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>状态</label>
+                            <select id="urgentFilterStatus" onchange="filterProducts()">
+                                <option value="">全部</option>
+                                <option value="expired">已过期</option>
+                                <option value="urgent" id="statusUrgent">7天内</option>
+                                <option value="high" id="statusHigh">15天内</option>
+                                <option value="medium" id="statusMedium">30天内</option>
+                                <option value="low" id="statusLow">60天内</option>
+                                <option value="notice" id="statusNotice">90天内</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Product Table -->
+                    <div class="table-container">
+                        <table class="product-table">
+                            <thead>
+                                <tr>
+                                    <th>产品名称</th>
+                                    <th>所属店铺</th>
+                                    <th>到期日期</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody">
+                                <tr>
+                                    <td colspan="4" class="empty-state">
+                                        <span class="empty-icon">📭</span>
+                                        <p>暂无数据</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Management Panel -->
+            <div class="panel data-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="title-icon">📊</span>
+                        数据管理
+                    </div>
+                </div>
+                <div class="data-actions">
+                    <div class="action-card">
+                        <div class="action-icon">📥</div>
+                        <div class="action-info">
+                            <h3>导入数据</h3>
+                            <p>支持 Excel 文件导入</p>
+                        </div>
+                        <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none">
+                        <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">选择文件</button>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-icon">➕</div>
+                        <div class="action-info">
+                            <h3>添加产品</h3>
+                            <p>手动录入产品效期</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="showAddModal()">添加产品</button>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-icon">📤</div>
+                        <div class="action-info">
+                            <h3>导出数据</h3>
+                            <p>导出为 Excel</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="exportData()">导出Excel</button>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-icon">📋</div>
+                        <div class="action-info">
+                            <h3>产品管理</h3>
+                            <p>查看、编辑、删除</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="showProductManage()">管理产品</button>
+                    </div>
+                    <div class="action-card" id="productTemplateSection">
+                        <div class="action-icon">📦</div>
+                        <div class="action-info">
+                            <h3>产品模板</h3>
+                            <p>预设产品列表</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="showProductTemplateManage()">管理模板</button>
+                    </div>
+                    <div class="action-card" id="storeManageSection">
+                        <div class="action-icon">🏪</div>
+                        <div class="action-info">
+                            <h3>店铺管理</h3>
+                            <p>管理店铺和账号</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="showStoreManage()">管理店铺</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>🔑 修改密码</h2>
+                <button class="modal-close" onclick="closeChangePasswordModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>原密码</label>
+                    <input type="password" id="oldPassword" placeholder="请输入原密码">
+                </div>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="newPassword" placeholder="请输入新密码（至少6位）">
+                </div>
+                <div class="form-group">
+                    <label>确认新密码</label>
+                    <input type="password" id="confirmPassword" placeholder="请再次输入新密码">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeChangePasswordModal()">取消</button>
+                <button class="btn btn-primary" onclick="changePassword()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>➕ 添加产品</h2>
+                <button class="modal-close" onclick="closeAddModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>店铺</label>
+                    <select id="addStore">
+                        <option value="">请选择店铺</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>产品模板</label>
+                    <select id="addProductTemplate" onchange="onTemplateSelect()">
+                        <option value="">请选择产品模板</option>
+                        <option value="custom">自定义产品</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>产品名称</label>
+                    <input type="text" id="addProductName" placeholder="选择模板后自动填充，或选择自定义手动输入">
+                </div>
+                <div class="form-group">
+                    <label>生产日期</label>
+                    <input type="date" id="addProduceDate">
+                </div>
+                <div class="form-group">
+                    <label>有效期（天）</label>
+                    <input type="number" id="addValidDays" placeholder="选择模板后自动填充">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddModal()">取消</button>
+                <button class="btn btn-primary" onclick="addProduct()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Security Notice (Console) -->
+    <script>
+    console.warn('%c⚠️ 安全提示', 'color: #ff4757; font-size: 20px; font-weight: bold;');
+    console.warn('%cAPI Key 暴露在前端代码中存在安全风险。建议：', 'color: #ff6b81; font-size: 14px;');
+    console.warn('%c1. 使用 Supabase RLS (Row Level Security) 限制匿名访问权限', 'color: #666; font-size: 12px;');
+    console.warn('%c2. 或将敏感操作移到后端服务', 'color: #666; font-size: 12px;');
+    console.warn('%c3. 使用环境变量存储敏感信息', 'color: #666; font-size: 12px;');
+    </script>
+</body>
+</html>
